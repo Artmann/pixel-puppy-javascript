@@ -6,23 +6,94 @@ describe('getResponsiveImageAttributes', () => {
   const project = 'test-project'
   const src = 'https://example.com/image.jpg'
 
-  describe('Strategy 1: DPR-based (width only)', () => {
-    it('generates 1x and 2x srcSet with x-descriptors', () => {
-      const result = getResponsiveImageAttributes(project, src, { width: 800 })
+  describe('Strategy 0: Non-responsive mode (responsive: false)', () => {
+    it('returns only src with no srcSet when responsive is false', () => {
+      const result = getResponsiveImageAttributes(project, src, {
+        responsive: false
+      })
 
-      expect(result.srcSet).toContain(' 1x')
-      expect(result.srcSet).toContain(' 2x')
-      expect(result.srcSet).not.toContain('w,') // Should not have w-descriptors
-      expect(result.srcSet).not.toMatch(/\d+w/) // Should not have width descriptors
+      expect(result.src).toBeTruthy()
+      expect(result.srcSet).toBe('')
+      expect(result.sizes).toBeUndefined()
+      expect(result.width).toBeUndefined()
     })
 
-    it('rounds width to nearest breakpoint', () => {
-      const result = getResponsiveImageAttributes(project, src, { width: 850 })
+    it('includes width in single URL when provided', () => {
+      const result = getResponsiveImageAttributes(project, src, {
+        width: 800,
+        responsive: false
+      })
 
-      // 850 should round up to 1080
-      expect(result.width).toBe(1080)
-      expect(result.srcSet).toContain('width=1080')
-      expect(result.srcSet).toContain('width=2160') // 2x
+      expect(result.src).toContain('width=800')
+      expect(result.srcSet).toBe('')
+    })
+
+    it('includes format in single URL when specified', () => {
+      const result = getResponsiveImageAttributes(project, src, {
+        format: 'png',
+        responsive: false
+      })
+
+      expect(result.src).toContain('format=png')
+      expect(result.srcSet).toBe('')
+    })
+  })
+
+  describe('Strategy 1: Default (no width or sizes)', () => {
+    it('generates w-descriptor srcSet with device breakpoints', () => {
+      const result = getResponsiveImageAttributes(project, src)
+
+      expect(result.srcSet).toContain('480w')
+      expect(result.srcSet).toContain('640w')
+      expect(result.srcSet).toContain('750w')
+      expect(result.srcSet).toContain('828w')
+      expect(result.srcSet).toContain('1080w')
+      expect(result.srcSet).toContain('1200w')
+      expect(result.srcSet).toContain('1920w')
+      expect(result.srcSet).toContain('2048w')
+      expect(result.srcSet).toContain('3840w')
+    })
+
+    it('sets sizes to 100vw', () => {
+      const result = getResponsiveImageAttributes(project, src)
+
+      expect(result.sizes).toBe('100vw')
+    })
+
+    it('does not include width attribute', () => {
+      const result = getResponsiveImageAttributes(project, src)
+
+      expect(result.width).toBeUndefined()
+    })
+
+    it('does not include image breakpoints by default', () => {
+      const result = getResponsiveImageAttributes(project, src)
+
+      expect(result.srcSet).not.toContain('16w')
+      expect(result.srcSet).not.toContain('32w')
+      expect(result.srcSet).not.toContain('128w')
+    })
+
+    it('uses smallest device breakpoint as fallback src', () => {
+      const result = getResponsiveImageAttributes(project, src)
+
+      expect(result.src).toContain('width=480')
+    })
+  })
+
+  describe('Strategy 2: Width-based (width provided, no sizes)', () => {
+    it('generates w-descriptor srcSet with all breakpoints + width + 2x', () => {
+      const result = getResponsiveImageAttributes(project, src, { width: 800 })
+
+      // Should have w-descriptors
+      expect(result.srcSet).toMatch(/\d+w/)
+      // Should include all device breakpoints
+      expect(result.srcSet).toContain('480w')
+      expect(result.srcSet).toContain('640w')
+      expect(result.srcSet).toContain('1920w')
+      // Should include provided width and 2x
+      expect(result.srcSet).toContain('800w')
+      expect(result.srcSet).toContain('1600w') // 2x
     })
 
     it('includes width attribute in return value', () => {
@@ -31,26 +102,21 @@ describe('getResponsiveImageAttributes', () => {
       expect(result.width).toBe(640)
     })
 
-    it('generates correct URLs for 1x and 2x', () => {
-      const result = getResponsiveImageAttributes(project, src, { width: 750 })
+    it('sets sizes to default responsive sizes', () => {
+      const result = getResponsiveImageAttributes(project, src, { width: 800 })
 
-      expect(result.src).toContain('width=750')
-      expect(result.srcSet).toContain('width=750')
-      expect(result.srcSet).toContain('width=1500') // 2x
+      expect(result.sizes).toBe('(min-width: 1024px) 1024px, 100vw')
     })
 
-    it('uses smallest breakpoint for very small widths', () => {
+    it('includes all breakpoints even for small widths', () => {
       const result = getResponsiveImageAttributes(project, src, { width: 10 })
 
-      // Should round up to 640 (smallest default device breakpoint)
-      expect(result.width).toBe(640)
-    })
-
-    it('uses largest breakpoint for very large widths', () => {
-      const result = getResponsiveImageAttributes(project, src, { width: 5000 })
-
-      // Should use 3840 (largest default device breakpoint)
-      expect(result.width).toBe(3840)
+      // Should include all device breakpoints
+      expect(result.srcSet).toContain('480w')
+      expect(result.srcSet).toContain('3840w')
+      // Should include provided width and 2x
+      expect(result.srcSet).toContain('10w')
+      expect(result.srcSet).toContain('20w') // 2x
     })
 
     it('includes format in URLs when specified', () => {
@@ -64,7 +130,7 @@ describe('getResponsiveImageAttributes', () => {
     })
   })
 
-  describe('Strategy 2: Width-based (sizes provided)', () => {
+  describe('Strategy 3: Sizes-based (sizes provided)', () => {
     it('generates w-descriptor srcSet when sizes provided', () => {
       const result = getResponsiveImageAttributes(project, src, {
         width: 800,
@@ -105,13 +171,15 @@ describe('getResponsiveImageAttributes', () => {
     })
 
     it('filters breakpoints based on smallest vw value', () => {
-      // 50vw on 640px device = 320px minimum
-      // Should exclude breakpoints smaller than 320
+      // 50vw on 480px device = 240px minimum
+      // Should exclude breakpoints smaller than 240
       const result = getResponsiveImageAttributes(project, src, {
         sizes: '(min-width: 768px) 50vw, 100vw'
       })
 
-      // Should include breakpoints >= 320
+      // Should include breakpoints >= 240
+      expect(result.srcSet).toContain('256w')
+      expect(result.srcSet).toContain('480w')
       expect(result.srcSet).toContain('640w')
       expect(result.srcSet).toContain('750w')
 
@@ -120,7 +188,6 @@ describe('getResponsiveImageAttributes', () => {
       expect(result.srcSet).not.toContain('32w')
       expect(result.srcSet).not.toContain('64w')
       expect(result.srcSet).not.toContain('128w')
-      expect(result.srcSet).not.toContain('256w')
     })
 
     it('uses all breakpoints when sizes has no vw units', () => {
@@ -131,6 +198,7 @@ describe('getResponsiveImageAttributes', () => {
       // Should include all device and image breakpoints
       expect(result.srcSet).toContain('16w')
       expect(result.srcSet).toContain('32w')
+      expect(result.srcSet).toContain('480w')
       expect(result.srcSet).toContain('640w')
       expect(result.srcSet).toContain('3840w')
     })
@@ -141,11 +209,12 @@ describe('getResponsiveImageAttributes', () => {
       })
 
       // Device breakpoints
+      expect(result.srcSet).toContain('480w')
       expect(result.srcSet).toContain('640w')
       expect(result.srcSet).toContain('1920w')
 
-      // Image breakpoints >= 640 (100vw on 640px device)
-      // Small breakpoints (< 640) are filtered out
+      // Image breakpoints >= 480 (100vw on 480px device)
+      // Small breakpoints (< 480) are filtered out
       expect(result.srcSet).not.toContain('16w')
       expect(result.srcSet).not.toContain('128w')
       expect(result.srcSet).not.toContain('384w')
@@ -163,49 +232,8 @@ describe('getResponsiveImageAttributes', () => {
     })
   })
 
-  describe('Strategy 3: Default (neither width nor sizes)', () => {
-    it('generates w-descriptor srcSet with device breakpoints', () => {
-      const result = getResponsiveImageAttributes(project, src)
-
-      expect(result.srcSet).toContain('640w')
-      expect(result.srcSet).toContain('750w')
-      expect(result.srcSet).toContain('828w')
-      expect(result.srcSet).toContain('1080w')
-      expect(result.srcSet).toContain('1200w')
-      expect(result.srcSet).toContain('1920w')
-      expect(result.srcSet).toContain('2048w')
-      expect(result.srcSet).toContain('3840w')
-    })
-
-    it('sets sizes to 100vw', () => {
-      const result = getResponsiveImageAttributes(project, src)
-
-      expect(result.sizes).toBe('100vw')
-    })
-
-    it('does not include width attribute', () => {
-      const result = getResponsiveImageAttributes(project, src)
-
-      expect(result.width).toBeUndefined()
-    })
-
-    it('does not include image breakpoints by default', () => {
-      const result = getResponsiveImageAttributes(project, src)
-
-      expect(result.srcSet).not.toContain('16w')
-      expect(result.srcSet).not.toContain('32w')
-      expect(result.srcSet).not.toContain('128w')
-    })
-
-    it('uses smallest device breakpoint as fallback src', () => {
-      const result = getResponsiveImageAttributes(project, src)
-
-      expect(result.src).toContain('width=640')
-    })
-  })
-
   describe('Custom breakpoints', () => {
-    it('uses custom device breakpoints', () => {
+    it('uses custom device breakpoints in default strategy', () => {
       const customBreakpoints = [400, 800, 1200]
       const result = getResponsiveImageAttributes(project, src, {
         deviceBreakpoints: customBreakpoints
@@ -214,6 +242,7 @@ describe('getResponsiveImageAttributes', () => {
       expect(result.srcSet).toContain('400w')
       expect(result.srcSet).toContain('800w')
       expect(result.srcSet).toContain('1200w')
+      expect(result.srcSet).not.toContain('480w')
       expect(result.srcSet).not.toContain('640w')
     })
 
@@ -224,23 +253,25 @@ describe('getResponsiveImageAttributes', () => {
         imageBreakpoints: customImageBreakpoints
       })
 
-      // Custom breakpoints >= 640 should be included
+      // Custom breakpoints >= 480 should be included
       expect(result.srcSet).toContain('700w')
       expect(result.srcSet).toContain('900w')
       expect(result.srcSet).toContain('1100w')
     })
 
-    it('rounds to custom breakpoints in DPR strategy', () => {
+    it('includes custom breakpoints in width-based strategy', () => {
       const customBreakpoints = [500, 1000, 1500]
       const result = getResponsiveImageAttributes(project, src, {
         width: 750,
         deviceBreakpoints: customBreakpoints
       })
 
-      // 750 should round up to 1000
-      expect(result.width).toBe(1000)
-      expect(result.srcSet).toContain('width=1000')
-      expect(result.srcSet).toContain('width=2000') // 2x
+      // Should include custom breakpoints + width + 2x
+      expect(result.srcSet).toContain('500w')
+      expect(result.srcSet).toContain('750w')
+      expect(result.srcSet).toContain('1000w')
+      expect(result.srcSet).toContain('1500w')
+      expect(result.srcSet).toContain('1500w') // 2x of 750
     })
   })
 
@@ -306,9 +337,10 @@ describe('getResponsiveImageAttributes', () => {
         sizes: '(min-width: 1200px) 33vw, (min-width: 768px) 50vw, 100vw'
       })
 
-      // 33vw on 640px = ~211px minimum
+      // 33vw on 480px = ~158px minimum
       // Should include 256w and above from image breakpoints
       expect(result.srcSet).toContain('256w')
+      expect(result.srcSet).toContain('480w')
       expect(result.srcSet).toContain('640w')
     })
   })

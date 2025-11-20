@@ -53,6 +53,7 @@ const attrs = getResponsiveImageAttributes(
 
 // Use in your HTML
 const img = document.createElement('img')
+
 img.src = attrs.src
 img.srcset = attrs.srcSet
 img.width = attrs.width
@@ -89,17 +90,30 @@ Returns a string containing the complete Pixel Puppy transformation URL.
 
 ### `getResponsiveImageAttributes(projectSlug, originalImageUrl, options?)`
 
-Generates optimized responsive image attributes (`src`, `srcSet`, `sizes`) for use in `<img>` tags. Automatically selects the best strategy based on provided options.
+Generates optimized responsive image attributes (`src`, `srcSet`, `sizes`) for
+use in `<img>` tags. Automatically selects the best strategy based on provided
+options.
 
 #### Strategies
 
-The function intelligently chooses between three strategies:
+The function intelligently chooses between four strategies:
 
-1. **DPR Strategy** (width only, no sizes): Generates 1x and 2x images for standard and retina displays. Uses x-descriptors (`1x`, `2x`).
+1. **Non-responsive Strategy** (responsive: false): Returns only a single src
+   URL with no srcset or sizes. Use this when you want a specific image size
+   without responsive behavior.
 
-2. **Width-based Strategy** (sizes provided): Generates multiple image widths using common device breakpoints. Uses w-descriptors (`640w`, `1920w`, etc.). Automatically filters out unnecessary breakpoints based on the `sizes` attribute.
+2. **Default Strategy** (no width or sizes): Uses all device breakpoints with
+   `sizes="100vw"`. Generates srcset with w-descriptors for common device
+   widths (480w, 640w, 750w, etc.). Ideal for full-width images.
 
-3. **Default Strategy** (no width or sizes): Uses all device breakpoints with `sizes="100vw"`. Ideal for full-width images.
+3. **Width-based Strategy** (width provided, no sizes): Generates srcset with
+   ALL common device breakpoints PLUS the provided width PLUS a 2x variant.
+   Uses w-descriptors and sets `sizes="(min-width: 1024px) 1024px, 100vw"`.
+   Ensures mobile alternatives are always available.
+
+4. **Sizes-based Strategy** (sizes provided): Generates multiple image widths
+   using common device breakpoints, filtered based on the smallest vw value in
+   the sizes attribute. Uses w-descriptors (`640w`, `1920w`, etc.).
 
 #### Parameters
 
@@ -109,17 +123,25 @@ The function intelligently chooses between three strategies:
   - **width** (number, optional): Display width in pixels
   - **sizes** (string, optional): HTML sizes attribute value
   - **format** ('webp' | 'png', optional): Output format. Defaults to 'webp'
-  - **deviceBreakpoints** (number[], optional): Custom device width breakpoints. Defaults to `[640, 750, 828, 1080, 1200, 1920, 2048, 3840]`
-  - **imageBreakpoints** (number[], optional): Custom image width breakpoints for small images. Defaults to `[16, 32, 48, 64, 96, 128, 256, 384]`
+  - **responsive** (boolean, optional): Whether to generate responsive image
+    attributes (srcset, sizes). When false, returns only a single src URL.
+    Defaults to true
+  - **deviceBreakpoints** (number[], optional): Custom device width breakpoints.
+    Defaults to `[480, 640, 750, 828, 1080, 1200, 1920, 2048, 3840]`
+  - **imageBreakpoints** (number[], optional): Custom image width breakpoints
+    for small images. Defaults to `[16, 32, 48, 64, 96, 128, 256, 384]`
 
 #### Returns
 
 Returns an object with:
 
 - **src** (string): Fallback image URL
-- **srcSet** (string): Complete srcset attribute value
-- **sizes** (string, optional): Sizes attribute value (only for width-based and default strategies)
-- **width** (number, optional): Width attribute value (only for DPR strategy)
+- **srcSet** (string): Complete srcset attribute value (empty string when
+  responsive: false)
+- **sizes** (string, optional): Sizes attribute value (not present for
+  non-responsive mode)
+- **width** (number, optional): Width attribute value (only for width-based
+  strategy)
 
 ## Usage Examples
 
@@ -193,13 +215,48 @@ document.querySelector('img').src = imageUrl
 
 ## Responsive Images Examples
 
-### DPR Strategy (Simple Retina Support)
+### Non-responsive Mode (Single URL)
 
-Generate 1x and 2x images for a fixed-width image:
+Generate a single optimized image URL without responsive behavior:
 
 ```typescript
 import { getResponsiveImageAttributes } from '@pixel-puppy/javascript'
 
+const attrs = getResponsiveImageAttributes(
+  'my-project',
+  'https://example.com/photo.jpg',
+  { width: 800, responsive: false }
+)
+
+// Use in HTML
+const img = document.createElement('img')
+img.src = attrs.src
+img.alt = 'Photo'
+
+// attrs.src: "...&width=800"
+// attrs.srcSet: "" (empty)
+// No sizes or width attribute
+```
+
+### Default Strategy (Full-Width Images)
+
+Ideal for hero images and full-width banners:
+
+```typescript
+const attrs = getResponsiveImageAttributes(
+  'my-project',
+  'https://example.com/photo.jpg'
+)
+
+// attrs.srcSet: "...&width=480 480w, ...&width=640 640w, ...&width=1920 1920w, ...&width=3840 3840w"
+// attrs.sizes: "100vw"
+```
+
+### Width-based Strategy (Fixed Width with Mobile Alternatives)
+
+Generates ALL device breakpoints plus your width plus 2x variant:
+
+```typescript
 const attrs = getResponsiveImageAttributes(
   'my-project',
   'https://example.com/photo.jpg',
@@ -208,18 +265,20 @@ const attrs = getResponsiveImageAttributes(
 
 // Use in HTML
 const img = document.createElement('img')
-img.src = attrs.src
+img.src = attrs.src // Uses 800 as fallback
 img.srcset = attrs.srcSet
-img.width = attrs.width // 828 (rounded to nearest breakpoint)
+img.sizes = attrs.sizes
+img.width = attrs.width // 800
 img.alt = 'Photo'
 
-// attrs.srcSet: "...&width=828 1x, ...&width=1656 2x"
-// attrs.width: 828
+// attrs.srcSet: "...&width=480 480w, ...&width=640 640w, ...&width=800 800w, ...&width=1600 1600w (2x), ...&width=3840 3840w"
+// attrs.sizes: "(min-width: 1024px) 1024px, 100vw"
+// attrs.width: 800
 ```
 
-### Width-based Strategy (Fully Responsive)
+### Sizes-based Strategy (Custom Responsive Behavior)
 
-Generate multiple image sizes for responsive layouts:
+Filter breakpoints based on your sizes attribute:
 
 ```typescript
 const attrs = getResponsiveImageAttributes(
@@ -240,20 +299,7 @@ img.alt = 'Photo'
 
 // attrs.srcSet: "...&width=640 640w, ...&width=750 750w, ...&width=800 800w, ..."
 // attrs.sizes: "(min-width: 768px) 50vw, 100vw"
-```
-
-### Default Strategy (Full-Width Images)
-
-Ideal for hero images and full-width banners:
-
-```typescript
-const attrs = getResponsiveImageAttributes(
-  'my-project',
-  'https://example.com/photo.jpg'
-)
-
-// attrs.srcSet: "...&width=640 640w, ...&width=1920 1920w, ...&width=3840 3840w"
-// attrs.sizes: "100vw"
+// Automatically filters out breakpoints smaller than needed based on 50vw
 ```
 
 ### Custom Breakpoints

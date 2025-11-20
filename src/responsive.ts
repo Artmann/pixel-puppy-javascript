@@ -3,7 +3,7 @@ import { buildImageUrl } from './urls'
 /**
  * Default device breakpoints covering mobile phones to 4K displays
  */
-const defaultDeviceBreakpoints = [640, 750, 828, 1080, 1200, 1920, 2048, 3840]
+const defaultDeviceBreakpoints = [480, 640, 750, 828, 1080, 1200, 1920, 2048, 3840]
 
 /**
  * Default image breakpoints for small images and icons
@@ -16,7 +16,7 @@ const defaultImageBreakpoints = [16, 32, 48, 64, 96, 128, 256, 384]
 export interface ResponsiveImageOptions {
   /**
    * Custom device width breakpoints
-   * @default [640, 750, 828, 1080, 1200, 1920, 2048, 3840]
+   * @default [480, 640, 750, 828, 1080, 1200, 1920, 2048, 3840]
    */
   deviceBreakpoints?: number[]
   /**
@@ -29,13 +29,18 @@ export interface ResponsiveImageOptions {
    */
   imageBreakpoints?: number[]
   /**
+   * Whether to generate responsive image attributes (srcset, sizes)
+   * When false, returns only a single src URL
+   * @default true
+   */
+  responsive?: boolean
+  /**
    * The HTML sizes attribute value
-   * When provided, uses width-based strategy with w-descriptors
+   * When provided, uses sizes-based strategy with filtered breakpoints
    */
   sizes?: string
   /**
    * The intended display width of the image in pixels
-   * Used for DPR-based strategy when sizes is not provided
    */
   width?: number
 }
@@ -110,14 +115,22 @@ function parseSmallestVw(sizes: string): number | null {
  * @returns Object with src, srcSet, and optionally sizes and width attributes
  *
  * @example
- * // DPR-based strategy (width only)
+ * // Non-responsive (single URL)
+ * const attrs = getResponsiveImageAttributes('my-project', 'https://example.com/image.jpg', {
+ *   width: 800,
+ *   responsive: false
+ * })
+ * // Returns: { src: '...' }
+ *
+ * @example
+ * // Width-based strategy (width provided, no sizes)
  * const attrs = getResponsiveImageAttributes('my-project', 'https://example.com/image.jpg', {
  *   width: 800
  * })
- * // Returns: { src: '...', srcSet: '... 1x, ... 2x', width: 800 }
+ * // Returns: { src: '...', srcSet: '... 480w, 640w, 750w, 800w, ..., 1600w, ...', sizes: '(min-width: 1024px) 1024px, 100vw', width: 800 }
  *
  * @example
- * // Width-based strategy (with sizes)
+ * // Sizes-based strategy (with sizes)
  * const attrs = getResponsiveImageAttributes('my-project', 'https://example.com/image.jpg', {
  *   width: 800,
  *   sizes: '(min-width: 768px) 50vw, 100vw'
@@ -125,9 +138,9 @@ function parseSmallestVw(sizes: string): number | null {
  * // Returns: { src: '...', srcSet: '... 640w, ... 750w, ...', sizes: '(min-width: 768px) 50vw, 100vw' }
  *
  * @example
- * // Default strategy (neither provided)
+ * // Default strategy (no width or sizes)
  * const attrs = getResponsiveImageAttributes('my-project', 'https://example.com/image.jpg')
- * // Returns: { src: '...', srcSet: '... 640w, ... 750w, ...', sizes: '100vw' }
+ * // Returns: { src: '...', srcSet: '... 480w, 640w, 750w, ...', sizes: '100vw' }
  */
 export function getResponsiveImageAttributes(
   project: string,
@@ -138,21 +151,18 @@ export function getResponsiveImageAttributes(
     width,
     sizes,
     format,
+    responsive = true,
     deviceBreakpoints = defaultDeviceBreakpoints,
     imageBreakpoints = defaultImageBreakpoints
   } = options
 
-  // Strategy 1: DPR-based (width provided, no sizes)
-  // Uses x-descriptors for 1x and 2x pixel density
-  if (width && !sizes) {
-    const rounded = roundToNearestBreakpoint(width, deviceBreakpoints)
-    const url1x = buildImageUrl(project, src, { width: rounded, format })
-    const url2x = buildImageUrl(project, src, { width: rounded * 2, format })
-
+  // Strategy 0: Non-responsive mode (responsive: false)
+  // Returns only a single URL
+  if (responsive === false) {
+    const singleUrl = buildImageUrl(project, src, { width, format })
     return {
-      src: url1x,
-      srcSet: `${url1x} 1x, ${url2x} 2x`,
-      width: rounded
+      src: singleUrl,
+      srcSet: ''
     }
   }
 
@@ -160,13 +170,13 @@ export function getResponsiveImageAttributes(
   const allBreakpoints = [
     ...deviceBreakpoints,
     ...imageBreakpoints,
-    ...(width ? [width] : [])
+    ...(width ? [width, width * 2] : []) // Include width and 2x variant
   ]
   const uniqueBreakpoints = Array.from(new Set(allBreakpoints)).sort(
     (a, b) => a - b
   )
 
-  // Strategy 2: Width-based (sizes provided)
+  // Strategy 3: Sizes-based (sizes provided)
   // Uses w-descriptors, filters based on smallest vw value
   if (sizes) {
     const smallestVw = parseSmallestVw(sizes)
@@ -174,7 +184,7 @@ export function getResponsiveImageAttributes(
 
     // If sizes contains vw units, filter out breakpoints smaller than minimum needed
     if (smallestVw !== null) {
-      const minDeviceWidth = 640 // Smallest device we support
+      const minDeviceWidth = 480 // Smallest device we support
       const minImageWidth = minDeviceWidth * smallestVw
       filteredBreakpoints = uniqueBreakpoints.filter(
         (bp) => bp >= minImageWidth
@@ -200,7 +210,26 @@ export function getResponsiveImageAttributes(
     }
   }
 
-  // Strategy 3: Default (neither width nor sizes provided)
+  // Strategy 2: Width-based (width provided, no sizes)
+  // Uses all device breakpoints + width + 2x variant
+  if (width) {
+    const srcSetEntries = uniqueBreakpoints.map((w) => {
+      const url = buildImageUrl(project, src, { width: w, format })
+      return `${url} ${w}w`
+    })
+
+    // Use the provided width as fallback src
+    const fallbackSrc = buildImageUrl(project, src, { width, format })
+
+    return {
+      src: fallbackSrc,
+      srcSet: srcSetEntries.join(', '),
+      sizes: '(min-width: 1024px) 1024px, 100vw',
+      width
+    }
+  }
+
+  // Strategy 1: Default (no width or sizes)
   // Uses all device breakpoints with sizes="100vw"
   const sortedBreakpoints = [...deviceBreakpoints].sort((a, b) => a - b)
   const srcSetEntries = sortedBreakpoints.map((w) => {
