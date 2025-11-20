@@ -1,0 +1,64 @@
+{
+  "name": "@pixel-puppy/javascript",
+  "version": "0.0.1",
+  "description": "Official JavaScript/TypeScript library for Pixel Puppy - Transform and optimize images with WebP conversion and smart resizing",
+  "author": "Christoffer Artmann",
+  "keywords": [
+    "pixel-puppy",
+    "image-optimization",
+    "image-transformation",
+    "webp",
+    "image-resize",
+    "cdn",
+    "image-api",
+    "performance",
+    "web-optimization"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Artmann/pixel-puppy-javascript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Artmann/pixel-puppy-javascript/issues"
+  },
+  "homepage": "https://github.com/Artmann/pixel-puppy-javascript#readme",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rolldown --config rolldown.config.ts && tsc --project tsconfig.build.json",
+    "prepublishOnly": "bun run build",
+    "format": "prettier --write .",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "tiny-invariant": "^1.3.3"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@vitest/coverage-v8": "4.0.12",
+    "prettier": "^3.6.2",
+    "rolldown": "^1.0.0-beta.51",
+    "vitest": "^4.0.12"
+  }
+}
