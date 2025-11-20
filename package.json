@@ -41,6 +41,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "rolldown --config rolldown.config.ts && tsc --project tsconfig.build.json",
     "prepublishOnly": "bun run build",
