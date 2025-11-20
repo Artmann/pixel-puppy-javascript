@@ -1,6 +1,7 @@
 # Contributing to @pixel-puppy/javascript
 
-Thank you for your interest in contributing to the Pixel Puppy JavaScript library! This guide will help you get started with development.
+Thank you for your interest in contributing to the Pixel Puppy JavaScript
+library! This guide will help you get started with development.
 
 ## Prerequisites
 
@@ -11,12 +12,14 @@ Thank you for your interest in contributing to the Pixel Puppy JavaScript librar
 ## Development Setup
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/pixel-puppy/javascript.git
 cd javascript
 ```
 
 2. Install dependencies:
+
 ```bash
 bun install
 ```
@@ -64,10 +67,12 @@ bun run build
 ```
 
 This command:
+
 1. Bundles the code with Rolldown into `dist/index.cjs` and `dist/index.mjs`
 2. Generates TypeScript declaration files with `tsc`
 
 The build output includes:
+
 - `dist/index.cjs` - CommonJS format
 - `dist/index.mjs` - ESM format
 - `dist/index.d.ts` - TypeScript type definitions
@@ -86,6 +91,7 @@ Please ensure your code is formatted before submitting a pull request.
 ## Making Changes
 
 1. Create a new branch for your feature or bug fix:
+
 ```bash
 git checkout -b feature/your-feature-name
 ```
@@ -93,21 +99,25 @@ git checkout -b feature/your-feature-name
 2. Make your changes and add tests for new functionality
 
 3. Run tests to ensure everything passes:
+
 ```bash
 bun test
 ```
 
 4. Format your code:
+
 ```bash
 bun run format
 ```
 
 5. Build the package to ensure it compiles correctly:
+
 ```bash
 bun run build
 ```
 
 6. Commit your changes with a clear, descriptive message:
+
 ```bash
 git commit -m "Add feature: your feature description"
 ```
@@ -143,19 +153,23 @@ test('buildImageUrl creates URL with default format', () => {
 
 ## Publishing
 
-The package is automatically built before publishing via the `prepublishOnly` script. To publish a new version:
+The package is automatically built before publishing via the `prepublishOnly`
+script. To publish a new version:
 
 1. Update the version in `package.json`:
+
 ```bash
 npm version patch|minor|major
 ```
 
 2. Publish to npm:
+
 ```bash
 bun publish
 ```
 
-The `prepublishOnly` hook will automatically run `bun run build` before publishing to ensure the latest code is included.
+The `prepublishOnly` hook will automatically run `bun run build` before
+publishing to ensure the latest code is included.
 
 ## Dependencies
 
@@ -181,16 +195,19 @@ This project uses [Rolldown](https://rolldown.rs/) for bundling:
 - Fast build times
 - Configuration in `rolldown.config.ts`
 
-TypeScript declarations are generated separately using `tsc` with the `tsconfig.build.json` configuration.
+TypeScript declarations are generated separately using `tsc` with the
+`tsconfig.build.json` configuration.
 
 ## Questions or Issues?
 
 If you have questions or run into issues:
 
-1. Check existing [GitHub issues](https://github.com/pixel-puppy/javascript/issues)
+1. Check existing
+   [GitHub issues](https://github.com/pixel-puppy/javascript/issues)
 2. Open a new issue with a clear description
 3. Join our community discussions
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under the
+MIT License.

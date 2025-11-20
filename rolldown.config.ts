@@ -5,12 +5,12 @@ export default defineConfig({
   output: [
     {
       format: 'esm',
-      file: 'dist/index.mjs',
+      file: 'dist/index.mjs'
     },
     {
       format: 'cjs',
-      file: 'dist/index.cjs',
-    },
+      file: 'dist/index.cjs'
+    }
   ],
-  external: ['tiny-invariant'],
+  external: ['tiny-invariant']
 })

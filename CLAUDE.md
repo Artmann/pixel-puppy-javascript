@@ -6,14 +6,16 @@ alwaysApply: false
 
 # Pixel Puppy JavaScript Library - AI Agent Guide
 
-This is a TypeScript library package that provides URL building utilities for the Pixel Puppy image transformation service.
+This is a TypeScript library package that provides URL building utilities for
+the Pixel Puppy image transformation service.
 
 ## Development Tools
 
 Default to using Bun instead of Node.js for all development tasks:
 
 - Use `bun install` instead of `npm install`, `yarn install`, or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>`, `yarn run <script>`, or `pnpm run <script>`
+- Use `bun run <script>` instead of `npm run <script>`, `yarn run <script>`, or
+  `pnpm run <script>`
 - Use `bun test` instead of `jest`, `vitest`, or other test runners
 - Bun automatically loads .env files, so don't use dotenv
 
@@ -31,29 +33,34 @@ test('buildImageUrl creates correct URL', () => {
 ```
 
 Run tests with coverage:
+
 ```bash
 bun run test:coverage
 ```
 
 ## Building
 
-This is a library package that builds to both CommonJS and ESM formats using Rolldown:
+This is a library package that builds to both CommonJS and ESM formats using
+Rolldown:
 
 ```bash
 bun run build
 ```
 
 The build process:
+
 1. Bundles code with Rolldown → `dist/index.cjs` and `dist/index.mjs`
 2. Generates TypeScript declarations with `tsc` → `dist/index.d.ts`
 
 Build configuration:
+
 - `rolldown.config.ts` - Bundler configuration
 - `tsconfig.build.json` - TypeScript declaration configuration
 
 ## Publishing
 
-The package automatically builds before publishing via the `prepublishOnly` hook. To publish:
+The package automatically builds before publishing via the `prepublishOnly`
+hook. To publish:
 
 ```bash
 bun publish
@@ -70,6 +77,7 @@ This is a simple utility library with a single main export:
 - `src/urls.test.ts` - Tests
 
 The library has minimal dependencies:
+
 - Runtime: `tiny-invariant` for assertions
 - Build: `rolldown` for bundling
 - Dev: `prettier` for formatting
@@ -106,6 +114,7 @@ This ensures compatibility with both ESM and CommonJS consumers.
 ## Common Tasks
 
 **Add a new utility function:**
+
 1. Add function to `src/urls.ts` (or create new file)
 2. Export from `src/index.ts`
 3. Add tests in corresponding `.test.ts` file
@@ -113,11 +122,13 @@ This ensures compatibility with both ESM and CommonJS consumers.
 5. Run `bun test` and `bun run build` to verify
 
 **Update dependencies:**
+
 ```bash
 bun install <package>
 ```
 
 **Run specific test file:**
+
 ```bash
 bun test src/urls.test.ts
 ```

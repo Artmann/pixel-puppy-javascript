@@ -1,8 +1,11 @@
 # @pixel-puppy/javascript
 
-The official JavaScript/TypeScript library for [Pixel Puppy](https://pixelpuppy.io/) - transforms your images into optimized, web-ready assets.
+The official JavaScript/TypeScript library for
+[Pixel Puppy](https://pixelpuppy.io/) - transforms your images into optimized,
+web-ready assets.
 
 Pixel Puppy is an image transformation service that helps you:
+
 - Convert images to modern formats (WebP, PNG)
 - Resize images while maintaining aspect ratio
 - Optimize images for web performance
@@ -25,10 +28,7 @@ bun install @pixel-puppy/javascript
 import { buildImageUrl } from '@pixel-puppy/javascript'
 
 // Transform an image to WebP format
-const imageUrl = buildImageUrl(
-  'my-project',
-  'https://example.com/photo.jpg'
-)
+const imageUrl = buildImageUrl('my-project', 'https://example.com/photo.jpg')
 
 // Use the URL in your HTML
 console.log(imageUrl)
@@ -47,7 +47,8 @@ Builds a URL for the Pixel Puppy image transformation API.
 - **originalImageUrl** (string, required): The URL of the image to transform
 - **options** (object, optional): Transformation settings
   - **format** ('webp' | 'png', optional): Output format. Defaults to 'webp'
-  - **width** (number, optional): Desired width in pixels. Maintains aspect ratio
+  - **width** (number, optional): Desired width in pixels. Maintains aspect
+    ratio
 
 #### Returns
 
@@ -74,36 +75,28 @@ const url = buildImageUrl('my-project', 'https://example.com/photo.jpg')
 ### Resize to specific width
 
 ```typescript
-const url = buildImageUrl(
-  'my-project',
-  'https://example.com/photo.jpg',
-  { width: 800 }
-)
+const url = buildImageUrl('my-project', 'https://example.com/photo.jpg', {
+  width: 800
+})
 // https://pixelpuppy.io/api/image?project=my-project&url=https://example.com/photo.jpg&format=webp&width=800
 ```
 
 ### Convert to PNG format
 
 ```typescript
-const url = buildImageUrl(
-  'my-project',
-  'https://example.com/photo.jpg',
-  { format: 'png' }
-)
+const url = buildImageUrl('my-project', 'https://example.com/photo.jpg', {
+  format: 'png'
+})
 // https://pixelpuppy.io/api/image?project=my-project&url=https://example.com/photo.jpg&format=png
 ```
 
 ### Resize and convert format
 
 ```typescript
-const url = buildImageUrl(
-  'my-project',
-  'https://example.com/photo.jpg',
-  {
-    format: 'png',
-    width: 1200
-  }
-)
+const url = buildImageUrl('my-project', 'https://example.com/photo.jpg', {
+  format: 'png',
+  width: 1200
+})
 // https://pixelpuppy.io/api/image?project=my-project&url=https://example.com/photo.jpg&format=png&width=1200
 ```
 
@@ -115,7 +108,12 @@ import { buildImageUrl } from '@pixel-puppy/javascript'
 function ProductImage({ imageUrl }: { imageUrl: string }) {
   const optimizedUrl = buildImageUrl('my-project', imageUrl, { width: 600 })
 
-  return <img src={optimizedUrl} alt="Product" />
+  return (
+    <img
+      src={optimizedUrl}
+      alt="Product"
+    />
+  )
 }
 ```
 
@@ -124,33 +122,40 @@ function ProductImage({ imageUrl }: { imageUrl: string }) {
 ```javascript
 import { buildImageUrl } from '@pixel-puppy/javascript'
 
-const imageUrl = buildImageUrl(
-  'my-project',
-  'https://example.com/photo.jpg',
-  { width: 800 }
-)
+const imageUrl = buildImageUrl('my-project', 'https://example.com/photo.jpg', {
+  width: 800
+})
 
 document.querySelector('img').src = imageUrl
 ```
 
 ## TypeScript Support
 
-This library is written in TypeScript and includes type definitions out of the box. No additional `@types` packages are needed.
+This library is written in TypeScript and includes type definitions out of the
+box. No additional `@types` packages are needed.
 
 ```typescript
-import { buildImageUrl, type TransformationOptions } from '@pixel-puppy/javascript'
+import {
+  buildImageUrl,
+  type TransformationOptions
+} from '@pixel-puppy/javascript'
 
 const options: TransformationOptions = {
   format: 'webp',
   width: 1200
 }
 
-const url = buildImageUrl('my-project', 'https://example.com/photo.jpg', options)
+const url = buildImageUrl(
+  'my-project',
+  'https://example.com/photo.jpg',
+  options
+)
 ```
 
 ## Learn More
 
-Visit [pixelpuppy.io](https://pixelpuppy.io/) to learn more about Pixel Puppy and sign up for an account.
+Visit [pixelpuppy.io](https://pixelpuppy.io/) to learn more about Pixel Puppy
+and sign up for an account.
 
 ## Contributing
 
