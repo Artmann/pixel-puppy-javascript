@@ -1,9 +1,26 @@
 import invariant from 'tiny-invariant'
 
-interface TransformationOptions {
-  // The desired image format. Defaults to 'webp'.
+import { resolveUrl } from './url-utils'
+
+/**
+ * Options for image transformation
+ */
+export interface TransformationOptions {
+  /**
+   * Base URL to prepend to relative image URLs.
+   * Overrides any globally configured baseUrl for this call only.
+   *
+   * @example
+   * buildImageUrl('project', '/images/hero.webp', { baseUrl: 'https://cdn.example.com' })
+   */
+  baseUrl?: string
+  /**
+   * The desired image format. Defaults to 'webp'.
+   */
   format?: 'webp' | 'png'
-  // The desired width of the image in pixels.
+  /**
+   * The desired width of the image in pixels.
+   */
   width?: number
 }
 
@@ -17,6 +34,7 @@ interface TransformationOptions {
  * @param projectSlug - The project identifier for your Pixel Puppy account
  * @param originalImageUrl - The URL of the original image to transform
  * @param options - Optional transformation settings
+ * @param options.baseUrl - Base URL for resolving relative image URLs
  * @param options.format - The desired output format ('webp' or 'png'). Defaults to 'webp'
  * @param options.width - The desired width in pixels. Maintains aspect ratio when resizing
  *
@@ -24,39 +42,46 @@ interface TransformationOptions {
  *
  * @throws {Error} When projectSlug is not provided
  * @throws {Error} When originalImageUrl is not provided
+ * @throws {Error} When originalImageUrl is relative and no baseUrl is configured
  * @throws {Error} When format is not 'webp' or 'png'
  * @throws {Error} When width is not a valid number
  * @throws {Error} When width is not a positive number
  *
  * @example
- * Basic usage with defaults (WebP format):
+ * Basic usage with absolute URL:
  * ```ts
  * const url = buildImageUrl('my-project', 'https://example.com/photo.jpg')
  * // Returns: https://pixelpuppy.io/api/image?project=my-project&url=https://example.com/photo.jpg&format=webp
  * ```
  *
  * @example
+ * Relative URL with baseUrl option:
+ * ```ts
+ * const url = buildImageUrl('my-project', '/images/hero.webp', { baseUrl: 'https://example.com' })
+ * // Resolves to: https://pixelpuppy.io/api/image?project=my-project&url=https://example.com/images/hero.webp&format=webp
+ * ```
+ *
+ * @example
+ * Relative URL with global config (browser auto-detects from window.location.origin):
+ * ```ts
+ * // In browser: works automatically
+ * const url = buildImageUrl('my-project', '/images/hero.webp')
+ *
+ * // In SSR/Node: configure once at startup
+ * configure({ baseUrl: 'https://example.com' })
+ * const url = buildImageUrl('my-project', '/images/hero.webp')
+ * ```
+ *
+ * @example
  * Resize to specific width:
  * ```ts
  * const url = buildImageUrl('my-project', 'https://example.com/photo.jpg', { width: 800 })
- * // Returns: https://pixelpuppy.io/api/image?project=my-project&url=https://example.com/photo.jpg&format=webp&width=800
  * ```
  *
  * @example
  * Convert to PNG format:
  * ```ts
  * const url = buildImageUrl('my-project', 'https://example.com/photo.jpg', { format: 'png' })
- * // Returns: https://pixelpuppy.io/api/image?project=my-project&url=https://example.com/photo.jpg&format=png
- * ```
- *
- * @example
- * Resize and convert format:
- * ```ts
- * const url = buildImageUrl('my-project', 'https://example.com/photo.jpg', {
- *   format: 'png',
- *   width: 1200
- * })
- * // Returns: https://pixelpuppy.io/api/image?project=my-project&url=https://example.com/photo.jpg&format=png&width=1200
  * ```
  */
 export function buildImageUrl(
@@ -66,6 +91,9 @@ export function buildImageUrl(
 ): string {
   invariant(projectSlug, 'projectSlug is required.')
   invariant(originalImageUrl, 'originalImageUrl is required.')
+
+  // Resolve relative URLs to absolute
+  const resolvedUrl = resolveUrl(originalImageUrl, options.baseUrl)
 
   const baseUrl = `https://pixelpuppy.io/api/image`
   const params = new URLSearchParams()
@@ -86,7 +114,7 @@ export function buildImageUrl(
   }
 
   params.append('project', projectSlug)
-  params.append('url', originalImageUrl)
+  params.append('url', resolvedUrl)
 
   params.append('format', format.toLowerCase())
 

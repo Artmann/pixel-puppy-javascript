@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, beforeEach } from 'vitest'
 
+import { configure, resetConfig } from './config'
 import { getResponsiveImageAttributes } from './responsive'
 
 describe('getResponsiveImageAttributes', () => {
@@ -342,6 +343,75 @@ describe('getResponsiveImageAttributes', () => {
       expect(result.srcSet).toContain('256w')
       expect(result.srcSet).toContain('480w')
       expect(result.srcSet).toContain('640w')
+    })
+  })
+
+  describe('Relative URL support', () => {
+    beforeEach(() => {
+      resetConfig()
+    })
+
+    it('resolves relative src with baseUrl option', () => {
+      const result = getResponsiveImageAttributes(project, '/images/hero.webp', {
+        baseUrl: 'https://example.com',
+        width: 800
+      })
+
+      expect(result.src).toContain('example.com%2Fimages%2Fhero.webp')
+      expect(result.srcSet).toContain('example.com%2Fimages%2Fhero.webp')
+    })
+
+    it('resolves relative src with global config', () => {
+      configure({ baseUrl: 'https://example.com' })
+      const result = getResponsiveImageAttributes(project, '/images/hero.webp', {
+        width: 800
+      })
+
+      expect(result.src).toContain('example.com%2Fimages%2Fhero.webp')
+    })
+
+    it('passes baseUrl through to all srcSet entries', () => {
+      const result = getResponsiveImageAttributes(project, '/images/hero.webp', {
+        baseUrl: 'https://example.com',
+        sizes: '100vw'
+      })
+
+      // All srcSet entries should use the resolved URL
+      const srcSetEntries = result.srcSet.split(', ')
+      srcSetEntries.forEach((entry) => {
+        expect(entry).toContain('example.com%2Fimages%2Fhero.webp')
+      })
+    })
+
+    it('works with non-responsive mode', () => {
+      const result = getResponsiveImageAttributes(project, '/images/hero.webp', {
+        baseUrl: 'https://example.com',
+        width: 800,
+        responsive: false
+      })
+
+      expect(result.src).toContain('example.com%2Fimages%2Fhero.webp')
+      expect(result.srcSet).toBe('')
+    })
+
+    it('throws error for relative URL without baseUrl', () => {
+      expect(() =>
+        getResponsiveImageAttributes(project, '/images/hero.webp', { width: 800 })
+      ).toThrow('Cannot resolve relative URL')
+    })
+
+    it('passes through absolute URLs unchanged', () => {
+      const result = getResponsiveImageAttributes(
+        project,
+        'https://other.com/image.jpg',
+        {
+          baseUrl: 'https://example.com', // Should be ignored
+          width: 800
+        }
+      )
+
+      expect(result.src).toContain('other.com%2Fimage.jpg')
+      expect(result.src).not.toContain('example.com%2Fimage')
     })
   })
 })

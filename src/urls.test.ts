@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 
+import { configure, resetConfig } from './config'
 import { buildImageUrl } from './urls'
 
 describe('buildImageUrl', () => {
@@ -277,6 +278,90 @@ describe('buildImageUrl', () => {
 
       expect(result).toBe(
         `https://pixelpuppy.io/api/image?project=test-project&url=${encodeURIComponent(complexUrl)}&format=webp&width=1200`
+      )
+    })
+  })
+
+  describe('relative URL support', () => {
+    beforeEach(() => {
+      resetConfig()
+    })
+
+    it('resolves relative URLs with baseUrl option', () => {
+      const result = buildImageUrl(projectSlug, '/images/hero.webp', {
+        baseUrl: 'https://example.com'
+      })
+
+      expect(result).toContain(
+        'url=https%3A%2F%2Fexample.com%2Fimages%2Fhero.webp'
+      )
+    })
+
+    it('resolves relative URLs with global config', () => {
+      configure({ baseUrl: 'https://example.com' })
+      const result = buildImageUrl(projectSlug, '/images/hero.webp')
+
+      expect(result).toContain(
+        'url=https%3A%2F%2Fexample.com%2Fimages%2Fhero.webp'
+      )
+    })
+
+    it('prefers baseUrl option over global config', () => {
+      configure({ baseUrl: 'https://global.example.com' })
+      const result = buildImageUrl(projectSlug, '/images/hero.webp', {
+        baseUrl: 'https://override.example.com'
+      })
+
+      expect(result).toContain('override.example.com')
+      expect(result).not.toContain('global.example.com')
+    })
+
+    it('passes through absolute URLs unchanged', () => {
+      const result = buildImageUrl(projectSlug, 'https://other.com/image.jpg', {
+        baseUrl: 'https://example.com' // Should be ignored
+      })
+
+      expect(result).toContain('url=https%3A%2F%2Fother.com%2Fimage.jpg')
+      expect(result).not.toContain('example.com%2Fimage')
+    })
+
+    it('throws descriptive error for relative URL without configuration', () => {
+      expect(() => buildImageUrl(projectSlug, '/images/hero.webp')).toThrow(
+        'Cannot resolve relative URL'
+      )
+    })
+
+    it('handles relative URL with width and format options', () => {
+      const result = buildImageUrl(projectSlug, '/images/hero.webp', {
+        baseUrl: 'https://example.com',
+        width: 800,
+        format: 'png'
+      })
+
+      expect(result).toContain(
+        'url=https%3A%2F%2Fexample.com%2Fimages%2Fhero.webp'
+      )
+      expect(result).toContain('width=800')
+      expect(result).toContain('format=png')
+    })
+
+    it('handles bare relative paths (without leading slash)', () => {
+      const result = buildImageUrl(projectSlug, 'images/hero.webp', {
+        baseUrl: 'https://example.com'
+      })
+
+      expect(result).toContain(
+        'url=https%3A%2F%2Fexample.com%2Fimages%2Fhero.webp'
+      )
+    })
+
+    it('handles relative URLs with query strings', () => {
+      const result = buildImageUrl(projectSlug, '/images/hero.webp?v=123', {
+        baseUrl: 'https://example.com'
+      })
+
+      expect(decodeURIComponent(result)).toContain(
+        'https://example.com/images/hero.webp?v=123'
       )
     })
   })

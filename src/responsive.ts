@@ -3,7 +3,9 @@ import { buildImageUrl } from './urls'
 /**
  * Default device breakpoints covering mobile phones to 4K displays
  */
-const defaultDeviceBreakpoints = [480, 640, 750, 828, 1080, 1200, 1920, 2048, 3840]
+const defaultDeviceBreakpoints = [
+  480, 640, 750, 828, 1080, 1200, 1920, 2048, 3840
+]
 
 /**
  * Default image breakpoints for small images and icons
@@ -14,6 +16,16 @@ const defaultImageBreakpoints = [16, 32, 48, 64, 96, 128, 256, 384]
  * Options for generating responsive image attributes
  */
 export interface ResponsiveImageOptions {
+  /**
+   * Base URL to prepend to relative image URLs.
+   * Overrides any globally configured baseUrl for this call only.
+   *
+   * @example
+   * getResponsiveImageAttributes('project', '/images/hero.webp', {
+   *   baseUrl: 'https://cdn.example.com'
+   * })
+   */
+  baseUrl?: string
   /**
    * Custom device width breakpoints
    * @default [480, 640, 750, 828, 1080, 1200, 1920, 2048, 3840]
@@ -65,25 +77,6 @@ export interface ResponsiveImageAttributes {
    * The width attribute value (only present for DPR-based strategy)
    */
   width?: number
-}
-
-function roundToNearestBreakpoint(
-  value: number,
-  breakpoints: number[]
-): number {
-  const sorted = [...breakpoints].sort((a, b) => a - b)
-
-  for (const breakpoint of sorted) {
-    if (breakpoint >= value) {
-      return breakpoint
-    }
-  }
-
-  if (sorted.length === 0) {
-    return value
-  }
-
-  return sorted[sorted.length - 1] ?? value
 }
 
 /**
@@ -148,6 +141,7 @@ export function getResponsiveImageAttributes(
   options: ResponsiveImageOptions = {}
 ): ResponsiveImageAttributes {
   const {
+    baseUrl,
     width,
     sizes,
     format,
@@ -159,7 +153,7 @@ export function getResponsiveImageAttributes(
   // Strategy 0: Non-responsive mode (responsive: false)
   // Returns only a single URL
   if (responsive === false) {
-    const singleUrl = buildImageUrl(project, src, { width, format })
+    const singleUrl = buildImageUrl(project, src, { baseUrl, width, format })
     return {
       src: singleUrl,
       srcSet: ''
@@ -192,13 +186,14 @@ export function getResponsiveImageAttributes(
     }
 
     const srcSetEntries = filteredBreakpoints.map((w) => {
-      const url = buildImageUrl(project, src, { width: w, format })
+      const url = buildImageUrl(project, src, { baseUrl, width: w, format })
       return `${url} ${w}w`
     })
 
     // Use the smallest breakpoint as fallback src
     const fallbackWidth = filteredBreakpoints[0] || uniqueBreakpoints[0]
     const fallbackSrc = buildImageUrl(project, src, {
+      baseUrl,
       width: fallbackWidth,
       format
     })
@@ -214,12 +209,12 @@ export function getResponsiveImageAttributes(
   // Uses all device breakpoints + width + 2x variant
   if (width) {
     const srcSetEntries = uniqueBreakpoints.map((w) => {
-      const url = buildImageUrl(project, src, { width: w, format })
+      const url = buildImageUrl(project, src, { baseUrl, width: w, format })
       return `${url} ${w}w`
     })
 
     // Use the provided width as fallback src
-    const fallbackSrc = buildImageUrl(project, src, { width, format })
+    const fallbackSrc = buildImageUrl(project, src, { baseUrl, width, format })
 
     return {
       src: fallbackSrc,
@@ -233,11 +228,12 @@ export function getResponsiveImageAttributes(
   // Uses all device breakpoints with sizes="100vw"
   const sortedBreakpoints = [...deviceBreakpoints].sort((a, b) => a - b)
   const srcSetEntries = sortedBreakpoints.map((w) => {
-    const url = buildImageUrl(project, src, { width: w, format })
+    const url = buildImageUrl(project, src, { baseUrl, width: w, format })
     return `${url} ${w}w`
   })
 
   const fallbackSrc = buildImageUrl(project, src, {
+    baseUrl,
     width: sortedBreakpoints[0],
     format
   })

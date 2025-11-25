@@ -39,6 +39,29 @@ console.log(imageUrl)
 // Output: https://pixelpuppy.io/api/image?project=my-project&url=https://example.com/photo.jpg&format=webp
 ```
 
+### Using Relative URLs
+
+In browser environments, relative URLs work automatically:
+
+```typescript
+import { buildImageUrl } from '@pixel-puppy/javascript'
+
+// Browser automatically uses window.location.origin
+const imageUrl = buildImageUrl('my-project', '/images/hero.webp')
+```
+
+For SSR/Node.js environments, configure the base URL once at startup:
+
+```typescript
+import { configure, buildImageUrl } from '@pixel-puppy/javascript'
+
+// Configure once at app startup
+configure({ baseUrl: 'https://example.com' })
+
+// Now relative URLs work everywhere
+const imageUrl = buildImageUrl('my-project', '/images/hero.webp')
+```
+
 ### Responsive Images
 
 ```typescript
@@ -62,6 +85,33 @@ img.width = attrs.width
 
 ## API Reference
 
+### `configure(config)`
+
+Configures global defaults for the library. Call this once at application
+startup for SSR/Node.js environments.
+
+#### Parameters
+
+- **config** (object): Configuration options
+  - **baseUrl** (string, optional): Base URL to prepend to relative image URLs
+
+#### Example
+
+```typescript
+import { configure } from '@pixel-puppy/javascript'
+
+// In SSR/Node.js environments
+configure({ baseUrl: 'https://example.com' })
+
+// In Next.js
+configure({ baseUrl: process.env.NEXT_PUBLIC_BASE_URL })
+```
+
+> **Note:** In browser environments, the base URL is automatically detected from
+> `window.location.origin`, so configuration is typically not needed.
+
+---
+
 ### `buildImageUrl(projectSlug, originalImageUrl, options?)`
 
 Builds a URL for the Pixel Puppy image transformation API.
@@ -69,8 +119,11 @@ Builds a URL for the Pixel Puppy image transformation API.
 #### Parameters
 
 - **projectSlug** (string, required): Your Pixel Puppy project identifier
-- **originalImageUrl** (string, required): The URL of the image to transform
+- **originalImageUrl** (string, required): The URL of the image to transform.
+  Can be absolute (`https://...`) or relative (`/images/...`)
 - **options** (object, optional): Transformation settings
+  - **baseUrl** (string, optional): Base URL for resolving relative image URLs.
+    Overrides global config for this call only
   - **format** ('webp' | 'png', optional): Output format. Defaults to 'webp'
   - **width** (number, optional): Desired width in pixels. Maintains aspect
     ratio
@@ -83,6 +136,7 @@ Returns a string containing the complete Pixel Puppy transformation URL.
 
 - Error when `projectSlug` is not provided
 - Error when `originalImageUrl` is not provided
+- Error when `originalImageUrl` is relative and no `baseUrl` is configured
 - Error when `format` is not 'webp' or 'png'
 - Error when `width` is not a valid positive number
 
@@ -103,13 +157,13 @@ The function intelligently chooses between four strategies:
    without responsive behavior.
 
 2. **Default Strategy** (no width or sizes): Uses all device breakpoints with
-   `sizes="100vw"`. Generates srcset with w-descriptors for common device
-   widths (480w, 640w, 750w, etc.). Ideal for full-width images.
+   `sizes="100vw"`. Generates srcset with w-descriptors for common device widths
+   (480w, 640w, 750w, etc.). Ideal for full-width images.
 
 3. **Width-based Strategy** (width provided, no sizes): Generates srcset with
-   ALL common device breakpoints PLUS the provided width PLUS a 2x variant.
-   Uses w-descriptors and sets `sizes="(min-width: 1024px) 1024px, 100vw"`.
-   Ensures mobile alternatives are always available.
+   ALL common device breakpoints PLUS the provided width PLUS a 2x variant. Uses
+   w-descriptors and sets `sizes="(min-width: 1024px) 1024px, 100vw"`. Ensures
+   mobile alternatives are always available.
 
 4. **Sizes-based Strategy** (sizes provided): Generates multiple image widths
    using common device breakpoints, filtered based on the smallest vw value in
@@ -118,8 +172,11 @@ The function intelligently chooses between four strategies:
 #### Parameters
 
 - **projectSlug** (string, required): Your Pixel Puppy project identifier
-- **originalImageUrl** (string, required): The URL of the image to transform
+- **originalImageUrl** (string, required): The URL of the image to transform.
+  Can be absolute (`https://...`) or relative (`/images/...`)
 - **options** (object, optional):
+  - **baseUrl** (string, optional): Base URL for resolving relative image URLs.
+    Overrides global config for this call only
   - **width** (number, optional): Display width in pixels
   - **sizes** (string, optional): HTML sizes attribute value
   - **format** ('webp' | 'png', optional): Output format. Defaults to 'webp'
@@ -180,6 +237,26 @@ const url = buildImageUrl('my-project', 'https://example.com/photo.jpg', {
   width: 1200
 })
 // https://pixelpuppy.io/api/image?project=my-project&url=https://example.com/photo.jpg&format=png&width=1200
+```
+
+### Using relative URLs
+
+```typescript
+import { configure, buildImageUrl } from '@pixel-puppy/javascript'
+
+// Option 1: Global configuration (recommended for SSR)
+configure({ baseUrl: 'https://example.com' })
+const url = buildImageUrl('my-project', '/images/hero.webp')
+
+// Option 2: Per-call baseUrl (useful for CDN overrides)
+const cdnUrl = buildImageUrl('my-project', '/images/hero.webp', {
+  baseUrl: 'https://cdn.example.com',
+  width: 800
+})
+
+// Option 3: Browser auto-detection (no config needed)
+// In browsers, window.location.origin is used automatically
+const browserUrl = buildImageUrl('my-project', '/images/hero.webp')
 ```
 
 ### Use in React
@@ -366,11 +443,27 @@ function ResponsiveImage({ src, alt, width, sizes }: ResponsiveImageProps) {
 
 ### Next.js Example
 
+Configure the base URL in your app initialization (e.g., `_app.tsx` or a layout
+component):
+
+```tsx
+// app/layout.tsx or pages/_app.tsx
+import { configure } from '@pixel-puppy/javascript'
+
+// Configure once for SSR support
+configure({
+  baseUrl: process.env.NEXT_PUBLIC_BASE_URL || 'https://example.com'
+})
+```
+
+Then use relative URLs anywhere in your app:
+
 ```tsx
 import { getResponsiveImageAttributes } from '@pixel-puppy/javascript'
 
-export default function ProductImage({ imageUrl }: { imageUrl: string }) {
-  const attrs = getResponsiveImageAttributes('my-project', imageUrl, {
+export default function ProductImage({ imagePath }: { imagePath: string }) {
+  // Works with relative URLs like "/images/product.webp"
+  const attrs = getResponsiveImageAttributes('my-project', imagePath, {
     width: 600,
     sizes: '(min-width: 1024px) 600px, (min-width: 768px) 50vw, 100vw'
   })
@@ -385,6 +478,9 @@ export default function ProductImage({ imageUrl }: { imageUrl: string }) {
     />
   )
 }
+
+// Usage
+;<ProductImage imagePath="/images/product.webp" />
 ```
 
 ## TypeScript Support
@@ -394,14 +490,31 @@ box. No additional `@types` packages are needed.
 
 ```typescript
 import {
+  configure,
   buildImageUrl,
   getResponsiveImageAttributes,
+  type PixelPuppyConfig,
+  type TransformationOptions,
   type ResponsiveImageOptions,
   type ResponsiveImageAttributes
 } from '@pixel-puppy/javascript'
 
-// Type-safe options
-const options: ResponsiveImageOptions = {
+// Type-safe configuration
+const config: PixelPuppyConfig = {
+  baseUrl: 'https://example.com'
+}
+configure(config)
+
+// Type-safe transformation options
+const transformOptions: TransformationOptions = {
+  baseUrl: 'https://cdn.example.com', // Per-call override
+  width: 800,
+  format: 'webp'
+}
+
+// Type-safe responsive options
+const responsiveOptions: ResponsiveImageOptions = {
+  baseUrl: 'https://cdn.example.com',
   width: 800,
   sizes: '(min-width: 768px) 50vw, 100vw',
   format: 'webp'
@@ -409,8 +522,8 @@ const options: ResponsiveImageOptions = {
 
 const attrs: ResponsiveImageAttributes = getResponsiveImageAttributes(
   'my-project',
-  'https://example.com/photo.jpg',
-  options
+  '/images/photo.jpg',
+  responsiveOptions
 )
 ```
 
